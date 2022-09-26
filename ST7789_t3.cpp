@@ -29,6 +29,10 @@
 #define ST77XX_MADCTL_ML  0x10
 #define ST77XX_MADCTL_RGB 0x00
 
+#define ST7789_240x240_XSTART 0
+#define ST7789_240x240_YSTART 80
+#define DELAY 0x80 // Probably should use generic names like Adafruit..
+
 ST7789_t3::ST7789_t3(uint8_t CS, uint8_t RS, uint8_t SID, uint8_t SCLK, uint8_t RST) : ST7735_t3(CS, RS, SID, SCLK, RST) 
 {
   // Assume the majority of ones.
@@ -46,8 +50,7 @@ ST7789_t3::ST7789_t3(uint8_t CS, uint8_t RS, uint8_t SID, uint8_t SCLK, uint8_t 
 	setOrigin();
 }
 
-ST7789_t3::ST7789_t3(uint8_t CS, uint8_t RS, uint8_t RST) : 
-      ST7735_t3(CS, RS, RST) 
+ST7789_t3::ST7789_t3(uint8_t CS, uint8_t RS, uint8_t RST) : ST7735_t3(CS, RS, RST) 
 {
   tabcolor = INIT_ST7789_TABCOLOR;
   _screenHeight = 240;
@@ -63,8 +66,69 @@ ST7789_t3::ST7789_t3(uint8_t CS, uint8_t RS, uint8_t RST) :
 	setOrigin();
 }
 
+static const uint8_t PROGMEM
+  cmd_st7789[] = {                  // Initialization commands for 7735B screens
+    8,                       // 9 commands in list:
+    ST7735_SWRESET,   DELAY,  //  1: Software reset, no args, w/delay
+      150,                     //    150 ms delay
+    ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, no args, w/delay
+      10,                    //     255 = 500 ms delay
+    ST7735_COLMOD , 1+DELAY,  //  3: Set color mode, 1 arg + delay:
+      0x55,                   //     16-bit color
+      10,                     //     10 ms delay
+    ST7735_MADCTL , 1      ,  //  4: Memory access ctrl (directions), 1 arg:
+      0x08,                   //     Row addr/col addr, bottom to top refresh
+    ST7735_CASET  , 4      ,  //  5: Column addr set, 4 args, no delay:
+      0x00, 
+      0x00,                   //     XSTART = 0
+      0x00, 
+      240,                    //      XEND = 240
+    ST7735_RASET  , 4      ,  // 6: Row addr set, 4 args, no delay:
+      0x00, 
+      0x00,                   //     YSTART = 0
+      320>>8, 
+      320 & 0xFF ,             //      YEND = 320
+    ST7735_INVON ,   DELAY,   // 7: hack
+      10,
+    ST7735_NORON ,   DELAY,  // 8: Normal display on, no args, w/delay
+      10,                     //     10 ms delay
+    ST7735_DISPON,   DELAY,  // 9: Main screen turn on, no args, w/delay
+      10                   //     255 = 500 ms delay
+  };
 
-void  ST7789_t3::setRotation(uint8_t m) 
+void  ST7789_t3::init(uint16_t width, uint16_t height, uint8_t mode)
+{
+  Serial.printf("ST7789_t3::init mode: %x\n", mode);
+	commonInit(NULL, mode);
+
+  if ((width == 240) && (height == 240)) {
+    _colstart = 0;
+    _rowstart = 80;
+  } else if ((width == 135) && (height == 240)) { // 1.13" display Their smaller display
+    _colstart = 53;
+    _rowstart = 40;
+  } else {
+    _colstart = 0;
+    _rowstart = 0;
+  }
+  
+  _height = height;
+  _width = width;
+  _screenHeight = height;
+  _screenWidth = width;   
+
+  commandList(cmd_st7789);
+  setRotation(0);
+  cursor_y  = cursor_x    = 0;
+  textsize_x = textsize_y = 1;
+  textcolor = textbgcolor = 0xFFFF;
+  wrap      = true;
+  font      = NULL;
+  setClipRect();
+  setOrigin();
+}
+
+void ST7789_t3::setRotation(uint8_t m) 
 {
   beginSPITransaction();
   writecommand(ST7735_MADCTL);
@@ -123,71 +187,18 @@ void  ST7789_t3::setRotation(uint8_t m)
 	cursor_y = 0;
 }
 
-#define ST7789_240x240_XSTART 0
-#define ST7789_240x240_YSTART 80
-
-// Probably should use generic names like Adafruit..
-#define DELAY 0x80
-static const uint8_t PROGMEM
-  cmd_st7789[] = {                  // Initialization commands for 7735B screens
-    9,                       // 9 commands in list:
-    ST7735_SWRESET,   DELAY,  //  1: Software reset, no args, w/delay
-      150,                     //    150 ms delay
-    ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, no args, w/delay
-      255,                    //     255 = 500 ms delay
-    ST7735_COLMOD , 1+DELAY,  //  3: Set color mode, 1 arg + delay:
-      0x55,                   //     16-bit color
-      10,                     //     10 ms delay
-    ST7735_MADCTL , 1      ,  //  4: Memory access ctrl (directions), 1 arg:
-      0x08,                   //     Row addr/col addr, bottom to top refresh
-    ST7735_CASET  , 4      ,  //  5: Column addr set, 4 args, no delay:
-      0x00, 
-      0x00,                   //     XSTART = 0
-      0x00, 
-      240,                    //      XEND = 240
-    ST7735_RASET  , 4      ,  // 6: Row addr set, 4 args, no delay:
-      0x00, 
-      0x00,                   //     YSTART = 0
-      320>>8, 
-      320 & 0xFF,             //      YEND = 320
-    ST7735_INVON ,   DELAY,   // 7: hack
-      10,
-    ST7735_NORON  ,   DELAY,  // 8: Normal display on, no args, w/delay
-      10,                     //     10 ms delay
-    ST7735_DISPON ,   DELAY,  // 9: Main screen turn on, no args, w/delay
-    255 };                  //     255 = 500 ms delay
-
-
-void  ST7789_t3::init(uint16_t width, uint16_t height, uint8_t mode)
+// NOTE: delay of at least 150ms reqired between calls to sleep on/off
+void ST7789_t3::sleep(bool on = true)
 {
-  Serial.printf("ST7789_t3::init mode: %x\n", mode);
-	commonInit(NULL, mode);
-
-  if ((width == 240) && (height == 240)) {
-    _colstart = 0;
-    _rowstart = 80;
-  } else if ((width == 135) && (height == 240)) { // 1.13" display Their smaller display
-    _colstart = 53;
-    _rowstart = 40;
+  uint8_t command;
+  if (on) {
+    command = ST7735_SLPIN;
   } else {
-    _colstart = 0;
-    _rowstart = 0;
+    command = ST7735_SLPOUT;
   }
-  
-  _height = height;
-  _width = width;
-  _screenHeight = height;
-  _screenWidth = width;   
 
-  commandList(cmd_st7789);
-  setRotation(0);
-  cursor_y  = cursor_x    = 0;
-  textsize_x = textsize_y = 1;
-  textcolor = textbgcolor = 0xFFFF;
-  wrap      = true;
-  font      = NULL;
-  setClipRect();
-  setOrigin();
-  
-}
-
+  beginSPITransaction();
+  writecommand(command);
+  delay(10);
+  endSPITransaction();
+} 
