@@ -67,33 +67,33 @@ ST7789_t3::ST7789_t3(uint8_t CS, uint8_t RS, uint8_t RST) : ST7735_t3(CS, RS, RS
 }
 
 static const uint8_t PROGMEM
-  cmd_st7789[] = {                  // Initialization commands for 7735B screens
-    8,                       // 9 commands in list:
-    ST7735_SWRESET,   DELAY,  //  1: Software reset, no args, w/delay
-      150,                     //    150 ms delay
-    ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, no args, w/delay
+  cmd_st7789[] = {           // Initialization commands for ST7789 screens
+    9,                       // 9 commands in list:
+    ST7735_SWRESET,   DELAY, //  1: Software reset, no args, w/delay
+      150,                   //    150 ms delay
+    ST7735_SLPOUT ,   DELAY, //  2: Out of sleep mode, no args, w/delay
       10,                    //     255 = 500 ms delay
-    ST7735_COLMOD , 1+DELAY,  //  3: Set color mode, 1 arg + delay:
-      0x55,                   //     16-bit color
-      10,                     //     10 ms delay
-    ST7735_MADCTL , 1      ,  //  4: Memory access ctrl (directions), 1 arg:
-      0x08,                   //     Row addr/col addr, bottom to top refresh
-    ST7735_CASET  , 4      ,  //  5: Column addr set, 4 args, no delay:
+    ST7735_COLMOD , 1+DELAY, //  3: Set color mode, 1 arg + delay:
+      0x55,                  //     16-bit color
+      10,                    //     10 ms delay
+    ST7735_MADCTL , 1      , //  4: Memory access ctrl (directions), 1 arg:
+      0x08,                  //     Row addr/col addr, bottom to top refresh
+    ST7735_CASET  , 4      , //  5: Column addr set, 4 args, no delay:
       0x00, 
-      0x00,                   //     XSTART = 0
+      0x00,                  //     XSTART = 0
       0x00, 
-      240,                    //      XEND = 240
-    ST7735_RASET  , 4      ,  // 6: Row addr set, 4 args, no delay:
+      240,                   //      XEND = 240
+    ST7735_RASET  , 4      , // 6: Row addr set, 4 args, no delay:
       0x00, 
-      0x00,                   //     YSTART = 0
+      0x00,                  //     YSTART = 0
       320>>8, 
-      320 & 0xFF ,             //      YEND = 320
-    ST7735_INVON ,   DELAY,   // 7: hack
+      320 & 0xFF ,           //      YEND = 320
+    ST7735_INVON ,   DELAY,  // 7: hack
       10,
     ST7735_NORON ,   DELAY,  // 8: Normal display on, no args, w/delay
-      10,                     //     10 ms delay
+      10,                    //     10 ms delay
     ST7735_DISPON,   DELAY,  // 9: Main screen turn on, no args, w/delay
-      10                   //     255 = 500 ms delay
+      10                     //     10 ms delay
   };
 
 void  ST7789_t3::init(uint16_t width, uint16_t height, uint8_t mode)
