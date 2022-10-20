@@ -187,7 +187,6 @@ void ST7789_t3::setRotation(uint8_t m)
 	cursor_y = 0;
 }
 
-// NOTE: delay of at least 150ms reqired between calls to sleep on/off
 void ST7789_t3::sleep(bool on = true)
 {
   uint8_t command;
@@ -199,6 +198,7 @@ void ST7789_t3::sleep(bool on = true)
 
   beginSPITransaction();
   writecommand(command);
-  delay(10);
+  delay(120);
   endSPITransaction();
+  delay(120); // delay of at least 150ms reqired between calls to sleep on/off
 } 
