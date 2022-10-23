@@ -198,7 +198,7 @@ void ST7789_t3::sleep(bool on = true)
 
   beginSPITransaction();
   writecommand(command);
-  delay(120);
+  delay(10); // minimum delay of 5ms before writing another command
   endSPITransaction();
-  delay(120); // delay of at least 150ms reqired between calls to sleep on/off
+  delay(150); // minimum delay of 150ms reqired between calls to sleep on/off
 } 
